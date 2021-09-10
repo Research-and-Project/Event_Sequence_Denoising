@@ -2,7 +2,7 @@
 
 By: [Zhihong Zhang](https://github.com/dawnlh)
 
-This repository contains the code for the project **Event Sequence Denoising and Reconstruction**. My bachelor's thesis  and a Photonics Asia 2021 conference paper are based on the project.
+This repository contains the code for the project **Event Sequence Denoising**. My bachelor's thesis  and a Photonics Asia 2021 conference paper are based on the project.
 
 ## Introduction
 
@@ -18,7 +18,7 @@ In recent years, deep learning based approaches have been wildly used in many vi
 
 ConvDAE converts the event sequence into 2D images and then involves an auto-encoder for denoising, which makes it compatible with existing deep denoisers and high-level vision tasks. 
 
-![image-20210910223645335](_asset/image-20210910223645335.png)
+<img src="_asset/image-20210910223645335.png" alt="image-20210910223645335" style="zoom:150%;" />
 
 
 
