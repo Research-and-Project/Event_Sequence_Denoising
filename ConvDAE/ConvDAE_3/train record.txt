@@ -1,0 +1,2 @@
+ConvDAE_3_3-pic_04-21_11-38： lr=0.0005； keep_prob=0.9
+ConvDAE_3_3-pic_04-21_11-53： lr=0.0003； keep_prob=0.85
