@@ -4,6 +4,7 @@ Created on Tue Mar 26 19:06:50 2019
 
 # SeqRNN 断点续训 finetune
 
++： 对X_test和x_batch的时间维度进行归一化
 @author: dawnlh
 """
 
@@ -34,28 +35,33 @@ tf.reset_default_graph()
 #参数设置
 n_steps=64   #步长
 n_inputs=4 #输入数据个数(特征维度)
-n_neurons=32 #每层神经元的数量
-#n_neurons = [64, 32] 
+#n_neurons=32 #每层神经元的数量
+n_neurons = [64, 32] 
 n_outputs=3  #输出数据（三种输出分别代表-1,0,1, 此处实际输出为类别序号，分别为0,1,2）
-n_epochs=50
+n_epochs=100
 batch_size=128
 learning_rate=0.001
 model_index = -1
+
 # 标志
 is_Finetune = True #微调模型标志
+time_std = 1;  # 时间归一化标志：0-步归一化；1-批归一化
+
 t1 = time()
 
 # 路径
-#path1 = "D:/1-Codes/matlab/resource/dataset/N_MNIST_seq/full scale/N_MNIST_seq_train.mat"
-#path2 = "D:/1-Codes/matlab/resource/dataset/N_MNIST_seq/full scale/N_MNIST_seq_test.mat"
-path1 = "D:/1-Codes/matlab/resource/dataset/N_MNIST_seq/sample/example.mat" # example只是一个测试集，这里当成训练集用
-path2 = "D:/1-Codes/matlab/resource/dataset/N_MNIST_seq/sample/example.mat" # 测试集与训练集相同
+path1 = "D:/1-Codes/matlab/resource/dataset/N_MNIST_seq/full scale/N_MNIST_seq_train.mat"
+path2 = "D:/1-Codes/matlab/resource/dataset/N_MNIST_seq/full scale/N_MNIST_seq_test.mat"
+#path1 = "D:/1-Codes/matlab/resource/dataset/N_MNIST_seq/long step/N_MNIST_seq_train.mat"
+#path2 = "D:/1-Codes/matlab/resource/dataset/N_MNIST_seq/long step/N_MNIST_seq_test.mat"
+#path1 = "D:/1-Codes/matlab/resource/dataset/N_MNIST_seq/sample/example.mat" # example只是一个测试集，这里当成训练集用
+#path2 = "D:/1-Codes/matlab/resource/dataset/N_MNIST_seq/sample/example.mat" # 测试集与训练集相同
 
 timestamp = '{:%m-%d_%H-%M/}'.format(datetime.now())
-train_log_dir = 'logs/train/SeqRNN4_exam_'+timestamp
-test_log_dir = 'logs/test/SeqRNN4_exam_'+timestamp
+train_log_dir = 'logs/train/SeqRNN_4T_'+timestamp
+test_log_dir = 'logs/test/SeqRNN_4T_'+timestamp
 root_path = "D:/1-Document/data/model_data/SeqRNN/"
-model_dir = "SeqRNN4_exam--" +  timestamp
+model_dir = "SeqRNN_4T_--" +  timestamp
 model_path = root_path + model_dir
 model_name = 'my_model'
 if not os.path.isdir(model_path):
@@ -63,9 +69,9 @@ if not os.path.isdir(model_path):
     
 # old model to fnetune
 if is_Finetune: 
-    root_old_model_path = "D:/1-Document/data/model_data/SeqRNN/good_bak/"
-#    root_old_model_path = "D:/1-Document/data/model_data/SeqRNN/"
-    old_model_dir = "SeqRNN_4--04-07_14-10(acc-0.817)/"
+#    root_old_model_path = "D:/1-Document/data/model_data/SeqRNN/good_bak/"
+    root_old_model_path = "D:/1-Document/data/model_data/SeqRNN/"
+    old_model_dir = "SeqRNN_4T_--04-11_22-41/"
     old_model_path = root_old_model_path + old_model_dir
     old_model_name = 'my_model'
 # In[ ]:
@@ -73,16 +79,16 @@ if is_Finetune:
 train_data = my_io.load_mat(path1)
 test_data = my_io.load_mat(path2)
 
-#train_x = train_data['N_MNIST_seq_train'].astype('float32')
-#train_y = train_data['N_MNIST_seq_train_gt'].astype('float32')
-#test_x = test_data['N_MNIST_seq_test'].astype('float32')
-#test_y = test_data['N_MNIST_seq_test_gt'].astype('float32')
+train_x = train_data['N_MNIST_seq_train'].astype('float32')
+train_y = train_data['N_MNIST_seq_train_gt'].astype('float32')
+test_x = test_data['N_MNIST_seq_test'].astype('float32')
+test_y = test_data['N_MNIST_seq_test_gt'].astype('float32')
 
 #example data
-train_x = train_data['example'].astype('float32')
-train_y = train_data['example_gt'].astype('float32') 
-test_x = test_data['example'].astype('float32')
-test_y = test_data['example_gt'].astype('float32')
+#train_x = train_data['example'].astype('float32')
+#train_y = train_data['example_gt'].astype('float32') 
+#test_x = test_data['example'].astype('float32')
+#test_y = test_data['example_gt'].astype('float32')
 
 print('train_x: ', train_x.shape, '\ttrain_y: ', train_y.shape)
 print('test_x: ', test_x.shape, '\ttest_y: ', test_y.shape)
@@ -156,110 +162,74 @@ print('X_test: ',X_test.shape, '\ty_test: ', y_test.shape)
 y_test1 = y_test.flatten()   #测试时输入标签
 
 
-# In[]
-# 网络构建
-
-if not is_Finetune: ## not finetune    
-    with tf.name_scope('inputs'):
-        X=tf.placeholder(tf.float32,[None,n_steps,n_inputs])
-        y=tf.placeholder(tf.int32,[None])
-    
-    #he_init=tf.contrib.layers.variance_scaling_initializer()#He initialization 参数初始化
-    #with tf.variable_scope("rnn",initializer=he_init):】
-    with tf.name_scope('RNN'):   
-        # 1-RNN
-    #    basic_cell = tf.contrib.rnn.BasicRNNCell(num_units=n_neurons,activation = tf.nn.relu) #,activation = tf.nn.relu/tanh   
-        # 1-LSTM
-        basic_cell = tf.contrib.rnn.BasicLSTMCell(num_units=n_neurons, forget_bias=0.8, activation = tf.nn.relu) #,activation = tf.nn.relu/tanh       
-        hiddens0, states = tf.nn.dynamic_rnn(basic_cell, X, dtype=tf.float32) #zzh    
-        
-        # 2
-    #    cells = [tf.contrib.rnn.BasicLSTMCell(num_units=n,activation = tf.nn.relu) for n in n_neurons]   
-    #    stacked_rnn_cell =  tf.contrib.rnn.MultiRNNCell(cells)
-    #    hiddens0, states = tf.nn.dynamic_rnn(stacked_rnn_cell, X, dtype=tf.float32) #zzh 
-    
-        hiddens = tf.reshape(hiddens0,[-1, n_neurons]) #将batch_size*n_steps， 作为第一维，相当于新的batch_size, 参与后面的loss计算， 保证每个时间步都计算loss
-        logits = fully_connected(hiddens,n_outputs,activation_fn=None)
-        xentropy = tf.nn.sparse_softmax_cross_entropy_with_logits(labels=y, logits=logits)
-    
-    with tf.name_scope('outputs'):
-        outputs = tf.reshape(tf.argmax(logits,1),[-1, n_steps])
-        
-    with tf.name_scope('evaluation'):
-        loss=tf.reduce_mean(xentropy)
-        tf.summary.scalar('loss', loss)
-        
-        correct=tf.nn.in_top_k(logits,y,1)
-        accuracy=tf.reduce_mean(tf.cast(correct,tf.float32))     
-        tf.summary.scalar('accuracy', accuracy)
-        
-    with tf.name_scope('train'):        
-        optimizer=tf.train.AdamOptimizer(learning_rate=learning_rate)
-        training_op=optimizer.minimize(loss)
+# 对时间维度进行归一化
+if time_std==0:
+    X_test[:,:,2] = np.array([(xi - np.min(xi))/(np.max(xi) -np.min(xi)) for xi in X_test[:,:,2]])  #对时间维度进行“步归一化”
+if time_std==1:
+    X_test[:,:,2] = np.array((X_test[:,:,2] - np.min(X_test[:,:,2]))/(np.max(X_test[:,:,2]) -np.min(X_test[:,:,2]))) #时间维度“批归一化”
 
 
-# In[]
-# 网络训练
+
+# In[] 模型加载
 # 初始化
 sess = tf.Session(config=config)
-sess.run(tf.global_variables_initializer())
-
-
-# 初始化待微调网络
-if is_Finetune:
-    #layers = [op.name for op in graph.get_operations() if op.type == 'train' in op.name]   找op的方法  
-    restorer = tf.train.import_meta_graph(old_model_path+old_model_name+'.meta')
-    
-    ckpt = tf.train.get_checkpoint_state(old_model_path)
-    if ckpt:
-        ckpt_states = ckpt.all_model_checkpoint_paths
-        restorer.restore(sess, ckpt_states[model_index])
-    
-    graph = tf.get_default_graph()
-    X = graph.get_tensor_by_name("inputs/Placeholder:0")
-    y = graph.get_tensor_by_name("inputs/Placeholder_1:0")
-    merged = graph.get_tensor_by_name("Merge/MergeSummary:0")       
-    outputs = graph.get_tensor_by_name("outputs/Reshape:0")
-    accuracy = graph.get_tensor_by_name("evaluation/Mean_1:0")  
-    training_op = graph.get_operation_by_name('train/Adam')
-    
-    acc = sess.run(accuracy, feed_dict={X: X_test, y:y_test1})  #for SeqRNN2--LSTM
-    print('\nfinetune mode:\ncurrent test accuracy: ', acc, '\n\nfinetuning start!\n\n')
-    
-saver = tf.train.Saver()
+sess.run(tf.global_variables_initializer())    
 
 # tensorboard
 writer_tr = tf.summary.FileWriter(train_log_dir, sess.graph)
 writer_te = tf.summary.FileWriter(test_log_dir)
 merged = tf.summary.merge_all() 
 
+# 加载
+#layers = [op.name for op in graph.get_operations() if op.type == 'train' in op.name]   找op的方法  
+restorer = tf.train.import_meta_graph(old_model_path+old_model_name+'.meta')
 
+ckpt = tf.train.get_checkpoint_state(old_model_path)
+if ckpt:
+    ckpt_states = ckpt.all_model_checkpoint_paths
+    restorer.restore(sess, ckpt_states[model_index])
 
+graph = tf.get_default_graph()
+X = graph.get_tensor_by_name("inputs/Placeholder:0")
+y = graph.get_tensor_by_name("inputs/Placeholder_1:0")
+merged = graph.get_tensor_by_name("Merge/MergeSummary:0")       
+outputs = graph.get_tensor_by_name("outputs/Reshape:0")
+accuracy = graph.get_tensor_by_name("evaluation/Mean_1:0")  
+training_op = graph.get_operation_by_name('train/Adam')
 
+acc = sess.run(accuracy, feed_dict={X: X_test, y:y_test1})  #for SeqRNN2--LSTM
+print('\nfinetune mode:\ncurrent test accuracy: ', acc, '\n\nfinetuning start!\n\n')
+
+# saver初始化
+saver = tf.train.Saver()
+
+# In[]
 # 训练
 for epoch in range(n_epochs):
     for x_batch, y_batch in my_io.batch_iter(batch_size, X_train, y_train):      
         x_batch=x_batch.reshape((-1,n_steps,n_inputs))#转换成batch_size个n_steps*n_inputs的输入
-#        x_batch[:,:,2] = np.array([(xi - np.min(xi))/(np.max(xi) -np.min(xi)) for xi in x_batch[:,:,2]])  #对时间维度进行“步归一化”，即每一步为范围进行归一化
-#        x_batch[:,:,2] = np.array((x_batch[:,:,2] - np.min(x_batch[:,:,2]))/(np.max(x_batch[:,:,2]) -np.min(x_batch[:,:,2]))) #时间维度“批归一化”
-        y_batch = y_batch.flatten() 
-        sess.run(training_op,feed_dict={X:x_batch,y:y_batch}) 
+        # 时间归一化
+        if time_std==0:
+            x_batch[:,:,2] = np.array([(xi - np.min(xi))/(np.max(xi) -np.min(xi)) for xi in x_batch[:,:,2]])  #对时间维度进行“步归一化”
+        if time_std==1:
+            x_batch[:,:,2] = np.array((x_batch[:,:,2] - np.min(x_batch[:,:,2]))/(np.max(x_batch[:,:,2]) -np.min(x_batch[:,:,2]))) #时间维度“批归一化”        
+        y_batch = y_batch.flatten() #zzh:确定一下展开顺序对不对
+        sess.run(training_op,feed_dict={X:x_batch,y:y_batch})      
 
-
-    tr, acc_train = sess.run([merged, accuracy], feed_dict={X:x_batch,y:y_batch})
-    te, acc_test = sess.run([merged, accuracy], feed_dict={X:X_test,y:y_test1})                      
-    writer_tr.add_summary(tr, epoch)
-    writer_te.add_summary(te, epoch)
-    t2 = time()
-    print(epoch,"Train accuracy:", acc_train, "Test accuracy:", acc_test, "Time cost:%.2f"%((t2-t1)/60))       
-
-
-# In[]
-        
-#保存模型和参数
-saver.save(sess,model_path+model_name)   
-print('model saved to:', model_path+'my_model')
-
+    if epoch%3 == 0:
+        tr, acc_train = sess.run([merged, accuracy], feed_dict={X:x_batch,y:y_batch})
+        # te, acc_test = sess.run([merged, accuracy], feed_dict={X:X_test[0:10000,...],y:y_test1[0:640000,...]})     
+        te, acc_test = sess.run([merged, accuracy], feed_dict={X:X_test, y:y_test1})         
+        writer_tr.add_summary(tr, epoch)
+        writer_te.add_summary(te, epoch)  
+        t2 = time()
+        print(epoch,"Train accuracy:", acc_train, "Test accuracy:", acc_test, "Time cost:%.2f min"%((t2-t1)/60))    
+    
+    if epoch%20 == 0 and epoch != 0:
+        saver.save(sess, model_path+model_name,global_step=epoch, write_meta_graph=False)
+        print('epoch %d model saved to:'%epoch, model_path+'my_model')
+saver.save(sess,model_path+model_name) 
+print('epoch: %d model saved to:'%epoch, model_path+model_name) 
 
 
 # In[ ]:
@@ -323,7 +293,6 @@ if is_Predict:
         sleep(1)
     
 
-
 # In[]
 
 # 终止化
@@ -332,13 +301,6 @@ if is_Predict:
 #writer_tr.close()
 #writer_te.close()
         
- 
-# In[]
-
-#模型加载
-#sess = tf.Session()
-#restorer = tf.train.import_meta_graph(path)
-#restorer.restore(sess, tf.train.latest_checkpoint('./'))
        
 # In[]
 

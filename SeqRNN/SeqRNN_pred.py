@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
 """
 Created on Fri Mar 22 09:46:04 2019
-模型加载与预测
+模型加载与预测 2
+for example data
 
-+1-4.10： 对x_data的时间维度进行归一化
++： 对x_data的时间维度进行归一化
 @author: dawnlh
 """
 
@@ -14,9 +15,8 @@ import tensorflow as tf
 import numpy as np
 from my_evt_lib import my_cvt as mc
 from my_tf_lib import my_io
-from time import sleep,time
+from time import sleep
 import os
-
 
 # In[]
 #图设置
@@ -25,21 +25,21 @@ tf.reset_default_graph()
 # In[]
 # 路径参数
 #test_data_path = "D:/1-Codes/matlab/resource/dataset/N_MNIST_seq/full scale/N_MNIST_seq_test.mat"
-#test_data_path = "D:/1-Codes/matlab/resource/dataset/N_MNIST_seq/long step/N_MNIST_seq_test.mat"
-test_data_path = "D:/1-Codes/matlab/resource/dataset/N_MNIST_seq/sample/N_MNIST_seq_test-2048.mat"
+#test_data_path = "D:/1-Codes/matlab/resource/dataset/N_MNIST_seq/sample/N_MNIST_seq_test-1024.mat"
+test_data_path = "D:/1-Codes/matlab/resource/dataset/N_MNIST_seq/sample/example.mat"
 
-#root_model_path = "D:/1-Document/data/model_data/SeqRNN/good_bak/"
-root_model_path = "D:/1-Document/data/model_data/SeqRNN/picked/"
+root_model_path = "D:/1-Document/data/model_data/SeqRNN/good_bak/"
 #root_model_path = "D:/1-Document/data/model_data/SeqRNN/"
-model_dir = "SeqRNN_6--05-03_20-29(acc-0.814)/"
+model_dir = "SeqRNN_5--04-07_14-07(acc-0.768)/"
 model_path = root_model_path + model_dir
 model_name = 'my_model'
-model_ind = 3
-time_std = 3 # 时间归一化标志：0-步归一化；1-批归一化
+model_ind = 2
+time_std = 2 # 时间归一化标志：0-步归一化；1-批归一化
 
-n_dataseg = 2048
+n_dataseg = 204800 # example test data
+#n_dataseg = 1024 # N_MNIST test data
 n_steps=64   #步长
-#n_steps=128   #步长
+#n_steps=128   #SeqRNN_2_1步长
 n_inputs=4 #输入数据个数(特征维度)
 n_neurons=32 #每层神经元的数量
 n_outputs=3  #输出数据（三种输出分别代表-1,0,1, 此处实际输出为类别序号，分别为0,1,2）
@@ -68,27 +68,29 @@ accuracy = graph.get_tensor_by_name("evaluation/Mean_1:0")
 
 #数据加载
 test_data = my_io.load_mat(test_data_path)
-test_x = test_data['N_MNIST_seq_test'].astype('float32')
-test_y = test_data['N_MNIST_seq_test_gt'].astype('float32')
-#test_x = test_data['N_MNIST_seq_train'][0:60000:600,...].astype('float32')
-#test_y = test_data['N_MNIST_seq_train_gt'][0:60000:600,...].astype('float32')
+test_x = test_data['example'].astype('float32')
+test_y = test_data['example_gt'].astype('float32')
+
+#test_x = test_data['N_MNIST_seq_test'].astype('float32')
+#test_y = test_data['N_MNIST_seq_test_gt'].astype('float32')
+
 print('test_x: ', test_x.shape, '\ttest_y: ', test_y.shape)
 
 #test_x = test_data['evtmat'].astype('float32')
 
 # 数据测试
-#for i in range(5):
-#     i = i * 9000 + 900 
-#     evt_ar1 = train_x[i,:,:]
-#     evt_ar2 = train_y[i,:,:] 
+#for i in range(1):
+##     i = i * 9000 + 900 
+#     evt_ar1 = test_x[i,:,:]
+#     evt_ar2 = test_y[i,:,:] 
 #    
-#     evt_td1 = mc.array2evt(evt_ar1)
-#     evt_td2 = mc.array2evt(evt_ar2) 
+#     evt_td1 = mc.array2evt(evt_ar1, 600, 480) 
+#     evt_td2 = mc.array2evt(evt_ar2, 600, 480)  
 #      
-#     evt_td1.show_td(1000,0.01)
-#     evt_td2.show_td(1000,0.01)
+#     evt_td1.show_td(10,0.01)
+#     evt_td2.show_td(10,0.02)
 
-
+# In[ ]:
 #数据归一化
 x_max_test = np.max(test_x[:,0,:])
 y_max_test = np.max(test_x[:,1,:])
@@ -127,21 +129,15 @@ if time_std == 0:
     x_data_[:,:,2] = np.array([(xi - np.min(xi))/(np.max(xi) -np.min(xi)) for xi in x_data_[:,:,2]])  #对时间维度进行“步归一化”
 if time_std == 1:
     x_data_[:,:,2] = np.array((x_data_[:,:,2] - np.min(x_data_[:,:,2]))/(np.max(x_data_[:,:,2]) -np.min(x_data_[:,:,2]))) #对时间维度进行“批归一化”
-    
+
 #ypreds_= sess.run(outputs, feed_dict={X: x_data_}) #for SeqRNN0,1,3--RNN
-#acc, ypreds_= sess.run([accuracy, outputs], feed_dict={X: x_data_, y:y_test1})
-time1 = time()
-ypreds_= sess.run(outputs, feed_dict={X: x_data_, y:y_test1})
-time2 = time()
-time_cost = time2-time1
-eps = test_x.shape[0]*test_x.shape[2]/time_cost
-acc_= sess.run(accuracy, feed_dict={X: x_data_, y:y_test1})
-print('test accuracy: %f eps: %f'%(acc_,eps))
+acc, ypreds_= sess.run([accuracy, outputs], feed_dict={X: x_data_, y:y_test1})  #for SeqRNN2--LSTM
+print('test accuracy: ', acc)
 
 preds_data =  np.copy(x_data)  #注意复制时要deepcopy才行
 preds_data[:,:,3] = ypreds_
 
-gt_data =  np.copy(x_data)
+gt_data =  np.copy(X_test)
 gt_data[:,:,3] = ydata
 
 # zzh:修改步长：原数据的长度是512，训练时截断为 n_steps
@@ -173,26 +169,19 @@ x_data[:,3,:] = x_data[:,3,:] - 1; #将极性表示还原为-1,0,1形式
 gt_data[:,3,:] = gt_data[:,3,:] - 1; #将极性表示还原为-1,0,1形式
 
 # In[]
-#显示
-
-
-
-for i in range(10):
-    i = int(i*len(x_data)/10 + 0)
-    x_data_i = x_data[i,...]     
+# 显示
+for i in range(1):
+#    x_data_i = x_data[i,...]     
     preds_data_i = preds_data[i,...]
-    gt_data_i = gt_data[i,...]
+#    gt_data_i = gt_data[i,...]
     
-    evt_data = mc.array2evt(x_data_i, 400, 400)    
-    evt_preds = mc.array2evt(preds_data_i, 400, 400)
-    evt_data_gt = mc.array2evt(gt_data_i, 400, 400) 
-
-    evt_data.show_td(200,0.02)  # return_pic_flag
-    sleep(0.5)    
-    evt_preds.show_td(200,0.02)
-    sleep(0.5)    
-    evt_data_gt.show_td(200,0.02)    
-    sleep(1.0)
+#    evt_data = mc.array2evt(x_data_i, 600, 480)    
+    evt_preds = mc.array2evt(preds_data_i, 600, 480)
+#    evt_data_gt = mc.array2evt(gt_data_i, 600, 480)
+    
+#    vid = evt_data.show_td(10, 0.005, return_pic_flag=0)
+    vid_preds = evt_preds.show_td(20,0.005, return_pic_flag=0)
+#    vid_gt =  evt_data_gt.show_td(20,0.005, return_pic_flag=0)
     
 # In[]
 
