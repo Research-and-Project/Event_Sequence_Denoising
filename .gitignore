@@ -2,3 +2,5 @@ logs*/
 predict_res/
 bak/
 doc/
+*.pptx
+*.docx
