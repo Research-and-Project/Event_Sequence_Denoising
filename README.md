@@ -39,3 +39,7 @@ SeqRNN utilizes recurrent neural network’s advantages in dealing with long-ter
 ## Note
 
 - All codes are converted into .py scripts, and .ipynb files will not be updated (and are out of date).
+
+
+
+## Citation
