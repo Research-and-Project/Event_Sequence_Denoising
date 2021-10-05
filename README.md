@@ -19,8 +19,9 @@ In recent years, deep learning based approaches have been wildly used in many vi
 ConvDAE converts the event sequence into 2D images and then involves an auto-encoder for denoising, which makes it compatible with existing deep denoisers and high-level vision tasks. 
 
 <div align=center>
-<img src="_asset/image-20210910223645335.png" alt="image-20210910223645335" style="zoom:100%;" />
+<img src="_asset/image-20210910223645335.png" alt="image-20210910223645335" style="zoom:33%;" />
 </div>
+
 
 
 <img src="_asset/image-20210910224007767.png" alt="image-20210910224007767" style="zoom:80%;" />
@@ -29,7 +30,7 @@ ConvDAE converts the event sequence into 2D images and then involves an auto-enc
 
 SeqRNN utilizes recurrent neural network’s advantages in dealing with long-term temporal sequence to realize online denoising while keep the event’s original AER representation form. 
 
-![image-20210910224205225](_asset/image-20210910224205225.png)
+<img src="_asset/image-20210910224205225.png" alt="image-20210910224205225" style="zoom: 33%;" />
 
 ![image-20210910223843021](_asset/image-20210910223843021.png)
 
